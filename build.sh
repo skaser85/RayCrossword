@@ -1,1 +1,1 @@
-gcc -o ./bin/test test.c -lraylib -lm
+gcc -o ./bin/test test.c -ggdb -Wextra -Wall -lraylib -lm
