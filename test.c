@@ -11,7 +11,16 @@
 #define CELL_COLOR_NORMAL RAYWHITE
 #define CELL_COLOR_HOVERED PINK
 #define CELL_COLOR_ACTIVE YELLOW
-#define FONT_SIZE 48
+#define FONT_SIZE 64
+
+const char* lemonMilkFP = "./fonts/LEMONMILK-Regular.otf";
+const char* orbitronSBFP = "./fonts/Orbitron/Orbitron-SemiBold.ttf";
+
+typedef struct
+{
+    int row;
+    int col;
+} RowCol;
 
 typedef struct
 {
@@ -27,12 +36,14 @@ typedef struct
 typedef struct
 {
 	Vector2 pos;
+    int id;
 	char* value;
-	char* id;
+    char* num;
 	bool blocked;
     bool hovered;
     bool active;
     Rectangle bounds;
+    RowCol rowCol;
 } Cell;
 
 typedef struct
@@ -67,22 +78,23 @@ Board InitBoard(int w, int h, int startX, int startY, Color lineColor, int lineT
 
 void InitCells(Cells *cells, Board b)
 {
+    int cellCount = 0;
 	for (int y = 0; y < CELL_COUNT; ++y)
 	{
         int cy = b.startY + (y * CELL_DIM);
 		for (int x = 0; x < CELL_COUNT; ++x)
 		{
             int cx = b.startX + (x * CELL_DIM);
-			Vector2 pos = { cx, cy };
-            Rectangle r = { cx, cy, CELL_DIM, CELL_DIM };
 			Cell c = 
             {
-                .pos = pos, 
-                .value = "A", 
-                .id = "", 
+                .pos = { cx, cy },
+                .id = cellCount++, 
+                .value = "A",
+                .num = "0",
                 .blocked = false,
                 .hovered = false,
-                .bounds = r
+                .bounds = { cx, cy, CELL_DIM, CELL_DIM },
+                .rowCol = (RowCol){ y, x }
             };
             nob_da_append(cells, c);
 		}
@@ -96,9 +108,12 @@ int main(void)
 	Cells cells = {0};
     InitCells(&cells, b); 
 
-    int activeCell = -1;
+    Cell* activeCell = 0;
 
 	InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "heyo");
+
+    Font lemonMilk = LoadFontEx(lemonMilkFP, FONT_SIZE, NULL, 0);
+    Font orbitronSB = LoadFontEx(orbitronSBFP, FONT_SIZE, NULL, 0);
 
 	while (!WindowShouldClose())
 	{
@@ -117,35 +132,58 @@ int main(void)
                 cells.items[i].active = !cells.items[i].active;
                 if (cells.items[i].active)
                 {
-                    if (activeCell < 0)
+                    if (activeCell <= 0)
                     {
-                        activeCell = i;
+                        activeCell = &cells.items[i];
                     }
-                    else if (activeCell != (int)i)
+                    else if (activeCell != &cells.items[i])
                     {
-                        cells.items[activeCell].active = false;
-                        activeCell = i;
+                        activeCell->active = false;
+                        activeCell = &cells.items[i];
                     }
+                    if (activeCell > 0)
+                        activeCell->active = true;
                 }
             }
         }
 
-        char theChar = (char)malloc(sizeof(char)+1);
         int charPressed = GetCharPressed();
-        if (charPressed > 0)
-        {
-            theChar = (char)charPressed;
-        }
-        if (activeCell > -1)
+        char theChar = (char)charPressed;
+        if (activeCell > 0)
         {
             if (charPressed > 0)
             {
-                printf("%c\n", theChar);
                 if (charPressed >= 32 && charPressed <= 125)
-                    strcpy(cells.items[activeCell].value, &theChar);
-                    //cells.items[activeCell].value = &theChar;
+                {
+                    activeCell->value = (char*)malloc(sizeof(char*));
+                    strcpy(activeCell->value, TextToUpper(&theChar));
+                }
             }
-         }
+            
+            if(IsKeyPressed(KEY_UP))
+            {
+                if(activeCell->rowCol.row = 0)
+                {
+                    
+                }
+                else
+                {
+                    activeCell = &cells.items[activeCell->id + CELL_COUNT]; 
+                }
+            }
+            else if(IsKeyPressed(KEY_DOWN))
+            {
+
+            }
+            else if(IsKeyPressed(KEY_LEFT))
+            {
+
+            }
+            else if(IsKeyPressed(KEY_RIGHT))
+            {
+
+            }
+        }
 
 		for (size_t i = 0; i < cells.count; i++)
 		{
@@ -156,11 +194,16 @@ int main(void)
             DrawRectangle(c.pos.x, c.pos.y, CELL_DIM, CELL_DIM, color);
             
             int w = MeasureText(c.value, FONT_SIZE);
-            DrawText(c.value, c.pos.x + CELL_DIM/2 - w/2, c.pos.y + CELL_DIM/2 - FONT_SIZE/2, FONT_SIZE, BLACK);
-
+            Vector2 pos = { .x = c.pos.x + CELL_DIM/2 - w/2, .y = c.pos.y + CELL_DIM/2 - FONT_SIZE/2 };
+            DrawTextEx(orbitronSB, c.value, pos, FONT_SIZE, 2, BLACK);
+            
             if (!c.blocked)
             {
-                DrawRectangleLines(c.pos.x, c.pos.y, CELL_DIM*0.25, CELL_DIM*0.25, BLACK);
+                Rectangle r = { .x = c.pos.x, .y = c.pos.y, .width = CELL_DIM*0.25, .height = CELL_DIM*0.25 };
+                DrawRectangleLinesEx(r, 1, BLACK);
+                w = MeasureText(c.num, FONT_SIZE/2);
+                pos = (Vector2){ .x = c.pos.x + (CELL_DIM*0.25)/2 - w/2, y: c.pos.y + (CELL_DIM*0.25)/2 - FONT_SIZE/4 };
+                DrawTextEx(orbitronSB, c.num, pos, FONT_SIZE/2, 2, BLACK);
             }
 
 		}
@@ -169,7 +212,9 @@ int main(void)
 
 		EndDrawing();
 	}
-
+    
+    UnloadFont(lemonMilk);
+    UnloadFont(orbitronSB);
 	CloseWindow();
 
 	return 0;
