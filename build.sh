@@ -1,1 +1,1 @@
-gcc -o ./bin/test test.c -ggdb -Wextra -Wall -lraylib -lm && ./bin/test
+gcc -o ./bin/RayCrossword main.c -ggdb -Wextra -Wall -lraylib -lm && ./bin/RayCrossword

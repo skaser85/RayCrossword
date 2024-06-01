@@ -11,7 +11,7 @@
 #define CELL_COLOR_NORMAL RAYWHITE
 #define CELL_COLOR_HOVERED PINK
 #define CELL_COLOR_ACTIVE YELLOW
-#define FONT_SIZE 64
+#define FONT_SIZE 80
 
 const char* lemonMilkFP = "./fonts/LEMONMILK-Regular.otf";
 const char* orbitronSBFP = "./fonts/Orbitron/Orbitron-SemiBold.ttf";
@@ -110,7 +110,7 @@ int main(void)
 
     Cell* activeCell = 0;
 
-	InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "heyo");
+	InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Ray Crossword");
 
     Font lemonMilk = LoadFontEx(lemonMilkFP, FONT_SIZE, NULL, 0);
     Font orbitronSB = LoadFontEx(orbitronSBFP, FONT_SIZE, NULL, 0);
