@@ -12,6 +12,7 @@
 #define CELL_COLOR_HOVERED PINK
 #define CELL_COLOR_ACTIVE YELLOW
 #define FONT_SIZE 80
+#define NUM_FONT_SIZE (FONT_SIZE/4)
 
 const char* lemonMilkFP = "./fonts/LEMONMILK-Regular.otf";
 const char* orbitronSBFP = "./fonts/Orbitron/Orbitron-SemiBold.ttf";
@@ -90,7 +91,7 @@ void InitCells(Cells *cells, Board b)
                 .pos = { cx, cy },
                 .id = cellCount++, 
                 .value = "A",
-                .num = "0",
+                .num = "25",
                 .blocked = false,
                 .hovered = false,
                 .bounds = { cx, cy, CELL_DIM, CELL_DIM },
@@ -113,9 +114,10 @@ int main(void)
 	InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Ray Crossword");
 
     Font lemonMilk = LoadFontEx(lemonMilkFP, FONT_SIZE, NULL, 0);
-    Font orbitronSB = LoadFontEx(orbitronSBFP, FONT_SIZE, NULL, 0);
-
-	while (!WindowShouldClose())
+    Font orbitronSBFullSize = LoadFontEx(orbitronSBFP, FONT_SIZE, NULL, 0);
+    Font orbitronSBNumSize = LoadFontEx(orbitronSBFP, NUM_FONT_SIZE, NULL, 0);
+	
+    while (!WindowShouldClose())
 	{
 		BeginDrawing();
 		
@@ -160,29 +162,39 @@ int main(void)
                 }
             }
             
+            int id = activeCell->id;
             if(IsKeyPressed(KEY_UP))
             {
-                if(activeCell->rowCol.row = 0)
-                {
-                    
-                }
-                else
-                {
-                    activeCell = &cells.items[activeCell->id + CELL_COUNT]; 
-                }
+                id -= CELL_COUNT;
+                if(id < 0)
+                    id += CELL_COUNT*CELL_COUNT;
             }
             else if(IsKeyPressed(KEY_DOWN))
             {
-
+                id += CELL_COUNT;
+                if(id > CELL_COUNT*CELL_COUNT-1)
+                    id -= CELL_COUNT*CELL_COUNT;    
             }
             else if(IsKeyPressed(KEY_LEFT))
             {
-
+                id -= 1;
+                if (id < 0)
+                    id = CELL_COUNT*CELL_COUNT-1;
+                
             }
             else if(IsKeyPressed(KEY_RIGHT))
             {
-
+                id += 1;
+                if(id == CELL_COUNT*CELL_COUNT)
+                    id = 0;
             }
+            if(id != activeCell->id)
+            {
+                activeCell->active = false;
+                activeCell = &cells.items[id];
+                activeCell->active = true;
+            }
+            
         }
 
 		for (size_t i = 0; i < cells.count; i++)
@@ -195,15 +207,15 @@ int main(void)
             
             int w = MeasureText(c.value, FONT_SIZE);
             Vector2 pos = { .x = c.pos.x + CELL_DIM/2 - w/2, .y = c.pos.y + CELL_DIM/2 - FONT_SIZE/2 };
-            DrawTextEx(orbitronSB, c.value, pos, FONT_SIZE, 2, BLACK);
+            DrawTextEx(orbitronSBFullSize, c.value, pos, FONT_SIZE, 2, BLACK);
             
             if (!c.blocked)
             {
                 Rectangle r = { .x = c.pos.x, .y = c.pos.y, .width = CELL_DIM*0.25, .height = CELL_DIM*0.25 };
                 DrawRectangleLinesEx(r, 1, BLACK);
-                w = MeasureText(c.num, FONT_SIZE/2);
-                pos = (Vector2){ .x = c.pos.x + (CELL_DIM*0.25)/2 - w/2, y: c.pos.y + (CELL_DIM*0.25)/2 - FONT_SIZE/4 };
-                DrawTextEx(orbitronSB, c.num, pos, FONT_SIZE/2, 2, BLACK);
+                w = MeasureText(c.num, NUM_FONT_SIZE);
+                pos = (Vector2){ .x = c.pos.x + r.width/2 - w/1.5, y: c.pos.y + r.height/2 - NUM_FONT_SIZE/2 };
+                DrawTextEx(orbitronSBNumSize, c.num, pos, NUM_FONT_SIZE, 2, BLACK);
             }
 
 		}
@@ -214,7 +226,8 @@ int main(void)
 	}
     
     UnloadFont(lemonMilk);
-    UnloadFont(orbitronSB);
+    UnloadFont(orbitronSBFullSize); 
+    UnloadFont(orbitronSBNumSize);
 	CloseWindow();
 
 	return 0;
