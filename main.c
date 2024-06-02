@@ -1,5 +1,12 @@
+#define ARENA_IMPLEMENTATION
+#include "./libs/arena.h"
+
 #define NOB_IMPLEMENTATION
-#include "nob.h"
+#include "./libs/nob.h"
+
+#define SV_IMPLEMENTATION
+#include "./libs/sv.h"
+
 #include "raylib.h"
 #include "raymath.h"
 
@@ -8,9 +15,6 @@
 #define BOARD_WIDTH 600
 #define CELL_COUNT 5
 #define CELL_DIM (BOARD_WIDTH / CELL_COUNT)
-#define CELL_COLOR_NORMAL RAYWHITE
-#define CELL_COLOR_HOVERED PINK
-#define CELL_COLOR_ACTIVE YELLOW
 #define FONT_SIZE 80
 #define NUM_FONT_SIZE (FONT_SIZE/4)
 
@@ -22,6 +26,14 @@ typedef struct
     int row;
     int col;
 } RowCol;
+
+typedef enum 
+{
+    CELL_NORMAL,
+    CELL_HOVERED,
+    CELL_ACTIVE,
+    CELL_BLOCKED
+} CELL_STATE;
 
 typedef struct
 {
@@ -40,9 +52,7 @@ typedef struct
     int id;
 	char* value;
     char* num;
-	bool blocked;
-    bool hovered;
-    bool active;
+    CELL_STATE cellState;
     Rectangle bounds;
     RowCol rowCol;
 } Cell;
@@ -53,6 +63,17 @@ typedef struct
 	size_t count;
 	size_t capacity;
 } Cells;
+
+Color GetCellColor(CELL_STATE cs)
+{
+    switch (cs)
+    {
+        case CELL_BLOCKED: return BLACK;
+        case CELL_NORMAL: return RAYWHITE;
+        case CELL_HOVERED: return PINK;
+        case CELL_ACTIVE: return YELLOW;
+    }
+}
 
 void DrawBoard(Board b)
 {
@@ -92,8 +113,7 @@ void InitCells(Cells *cells, Board b)
                 .id = cellCount++, 
                 .value = "A",
                 .num = "25",
-                .blocked = false,
-                .hovered = false,
+                .cellState = CELL_NORMAL,
                 .bounds = { cx, cy, CELL_DIM, CELL_DIM },
                 .rowCol = (RowCol){ y, x }
             };
@@ -124,34 +144,57 @@ int main(void)
 		ClearBackground(LIGHTGRAY);
 		
 		Vector2 m = GetMousePosition();
-        bool mouseReleased = IsMouseButtonReleased(MOUSE_BUTTON_LEFT);
+        bool leftMouseReleased = IsMouseButtonReleased(MOUSE_BUTTON_LEFT);
+        bool rightMouseReleased = IsMouseButtonReleased(MOUSE_BUTTON_RIGHT);        
 
         for (size_t i = 0; i < cells.count; i++)
-        {
-            cells.items[i].hovered = !cells.items[i].blocked && CheckCollisionPointRec(m, cells.items[i].bounds);
-            if (mouseReleased && cells.items[i].hovered)
+        {   
+            Cell* c = &cells.items[i];
+            if(CheckCollisionPointRec(m, c->bounds))
             {
-                cells.items[i].active = !cells.items[i].active;
-                if (cells.items[i].active)
+                if (c->cellState== CELL_BLOCKED)
                 {
-                    if (activeCell <= 0)
-                    {
-                        activeCell = &cells.items[i];
-                    }
-                    else if (activeCell != &cells.items[i])
-                    {
-                        activeCell->active = false;
-                        activeCell = &cells.items[i];
-                    }
-                    if (activeCell > 0)
-                        activeCell->active = true;
+                    if (rightMouseReleased)
+                        c->cellState = CELL_HOVERED;
                 }
+                else
+                {
+                    if (rightMouseReleased)
+                    {
+                        c->cellState = CELL_BLOCKED;
+                        if (activeCell == c)
+                            activeCell = NULL;
+                    }
+                    else if (leftMouseReleased)
+                    {
+                        if (c->cellState == CELL_ACTIVE)
+                        {
+                            c->cellState = CELL_HOVERED;
+                            activeCell = NULL;
+                        }
+                        else
+                        {
+                            c->cellState = CELL_ACTIVE;
+                            activeCell = c;
+                        }
+                    }
+                    else
+                    {
+                        if (c->cellState != CELL_ACTIVE)
+                            c->cellState = CELL_HOVERED;
+                    }
+                }
+            }
+            else if (c->cellState != CELL_BLOCKED)
+            {
+                if (c->cellState != CELL_ACTIVE)
+                    c->cellState = CELL_NORMAL;
             }
         }
 
         int charPressed = GetCharPressed();
         char theChar = (char)charPressed;
-        if (activeCell > 0)
+        if (activeCell != NULL)
         {
             if (charPressed > 0)
             {
@@ -190,9 +233,9 @@ int main(void)
             }
             if(id != activeCell->id)
             {
-                activeCell->active = false;
+                activeCell->cellState = CELL_NORMAL;
                 activeCell = &cells.items[id];
-                activeCell->active = true;
+                activeCell->cellState = CELL_ACTIVE;
             }
             
         }
@@ -200,23 +243,21 @@ int main(void)
 		for (size_t i = 0; i < cells.count; i++)
 		{
 			Cell c = cells.items[i];
-            Color color = c.hovered ? CELL_COLOR_HOVERED : CELL_COLOR_NORMAL;
-			if (c.active)
-                color = CELL_COLOR_ACTIVE;
-            DrawRectangle(c.pos.x, c.pos.y, CELL_DIM, CELL_DIM, color);
+            DrawRectangle(c.pos.x, c.pos.y, CELL_DIM, CELL_DIM, GetCellColor(c.cellState));
             
-            int w = MeasureText(c.value, FONT_SIZE);
-            Vector2 pos = { .x = c.pos.x + CELL_DIM/2 - w/2, .y = c.pos.y + CELL_DIM/2 - FONT_SIZE/2 };
-            DrawTextEx(orbitronSBFullSize, c.value, pos, FONT_SIZE, 2, BLACK);
-            
-            if (!c.blocked)
+            if (c.cellState != CELL_BLOCKED)
             {
+                int w = MeasureText(c.value, FONT_SIZE);
+                Vector2 pos = { .x = c.pos.x + CELL_DIM/2 - w/2, .y = c.pos.y + CELL_DIM/2 - FONT_SIZE/2 };
+                DrawTextEx(orbitronSBFullSize, c.value, pos, FONT_SIZE, 2, BLACK);
+            
                 Rectangle r = { .x = c.pos.x, .y = c.pos.y, .width = CELL_DIM*0.25, .height = CELL_DIM*0.25 };
                 DrawRectangleLinesEx(r, 1, BLACK);
                 w = MeasureText(c.num, NUM_FONT_SIZE);
                 pos = (Vector2){ .x = c.pos.x + r.width/2 - w/1.5, y: c.pos.y + r.height/2 - NUM_FONT_SIZE/2 };
                 DrawTextEx(orbitronSBNumSize, c.num, pos, NUM_FONT_SIZE, 2, BLACK);
             }
+            
 
 		}
 
