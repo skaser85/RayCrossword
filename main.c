@@ -50,8 +50,8 @@ typedef struct
 {
 	Vector2 pos;
     int id;
-	char* value;
-    char* num;
+	String_View value;
+    String_View num;
     CELL_STATE cellState;
     Rectangle bounds;
     RowCol rowCol;
@@ -111,8 +111,8 @@ void InitCells(Cells *cells, Board b)
             {
                 .pos = { cx, cy },
                 .id = cellCount++, 
-                .value = "A",
-                .num = "25",
+                .value = SV("A"),
+                .num = SV("0"),
                 .cellState = CELL_NORMAL,
                 .bounds = { cx, cy, CELL_DIM, CELL_DIM },
                 .rowCol = (RowCol){ y, x }
@@ -192,16 +192,21 @@ int main(void)
             }
         }
 
-        int charPressed = GetCharPressed();
-        char theChar = (char)charPressed;
+        
         if (activeCell != NULL)
         {
+            int charPressed = GetCharPressed();
+            char theChar = (char)charPressed;
             if (charPressed > 0)
             {
-                if (charPressed >= 32 && charPressed <= 125)
+                if ((charPressed >= 'A' && charPressed <= 'Z') ||
+                    (charPressed >= 'a' && charPressed <= 'z'))
                 {
-                    activeCell->value = (char*)malloc(sizeof(char*));
-                    strcpy(activeCell->value, TextToUpper(&theChar));
+                    activeCell->value.data = TextToUpper(&theChar);
+                }
+                if (charPressed >= '0' && charPressed <= '9')
+                {
+                    activeCell->num.data = &theChar;
                 }
             }
             
@@ -247,15 +252,19 @@ int main(void)
             
             if (c.cellState != CELL_BLOCKED)
             {
-                int w = MeasureText(c.value, FONT_SIZE);
+                int w = MeasureText(c.value.data, FONT_SIZE);
                 Vector2 pos = { .x = c.pos.x + CELL_DIM/2 - w/2, .y = c.pos.y + CELL_DIM/2 - FONT_SIZE/2 };
-                DrawTextEx(orbitronSBFullSize, c.value, pos, FONT_SIZE, 2, BLACK);
-            
-                Rectangle r = { .x = c.pos.x, .y = c.pos.y, .width = CELL_DIM*0.25, .height = CELL_DIM*0.25 };
-                DrawRectangleLinesEx(r, 1, BLACK);
-                w = MeasureText(c.num, NUM_FONT_SIZE);
-                pos = (Vector2){ .x = c.pos.x + r.width/2 - w/1.5, y: c.pos.y + r.height/2 - NUM_FONT_SIZE/2 };
-                DrawTextEx(orbitronSBNumSize, c.num, pos, NUM_FONT_SIZE, 2, BLACK);
+                DrawTextEx(orbitronSBFullSize, c.value.data, pos, FONT_SIZE, 2, BLACK);
+                
+                if (c.num.data != "")
+                {
+                    Rectangle r = { .x = c.pos.x, .y = c.pos.y, .width = CELL_DIM*0.25, .height = CELL_DIM*0.25 };
+                    DrawRectangleLinesEx(r, 1, BLACK);
+                    w = MeasureText(c.num.data, NUM_FONT_SIZE);
+                    pos = (Vector2){ .x = c.pos.x + r.width/2 - w/1.5, y: c.pos.y + r.height/2 - NUM_FONT_SIZE/2 };
+                    DrawTextEx(orbitronSBNumSize, c.num.data, pos, NUM_FONT_SIZE, 2, BLACK);
+                }
+                
             }
             
 
